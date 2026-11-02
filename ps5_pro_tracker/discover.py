@@ -53,11 +53,9 @@ def find_candidates(html: str, base_url: str, config: Config, limit: int) -> lis
         if img is not None and img.get("alt"):
             text += " " + img["alt"]
         label = text.strip() or urlparse(url).path
-        if not (config.is_ps5_pro(text) or config.is_ps5_pro(urlparse(url).path)):
-            continue
-        # A link whose text explicitly names an accessory is still excluded
-        # even if the slug matched.
-        if text.strip() and not config.is_ps5_pro(text) and any(p.search(text) for p in config.exclude):
+        # Judge the link text and the URL slug together, so an accessory named
+        # in either one is caught.
+        if not config.is_ps5_pro(f"{text} {urlparse(url).path}"):
             continue
         key = _canonical(url)
         if key in seen:

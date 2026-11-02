@@ -58,6 +58,8 @@ def _apply_filters(check: Check, retailer: Retailer, config: Config, discovered:
         retailer.seller_must_match, check.seller, re.I
     ):
         check.status, check.reason = IGNORED, f"third-party marketplace seller: {check.seller}"
+    elif retailer.seller_must_match and not check.seller:
+        check.reason += f" - seller not confirmed: make sure it's sold by {retailer.name} itself"
     return check
 
 

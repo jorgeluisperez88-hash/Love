@@ -47,9 +47,19 @@ match:
     - 'charging station|charger'
     - 'cooling fan|dust (cover|plug)'
     - 'protection plan|warranty only|geek squad'
-    - 'pre[- ]?owned|refurbished|renewed|\bused\b'
+    - 'pre[- ]?owned|refurbished|renewed|\bused\b|open[- ]box'
     - 'gift card'
     - 'pro enhanced'
+  # Accessory words. A listing containing one is skipped unless it also says
+  # "console" or "bundle" (e.g. "PS5 Pro Console + DualSense Controller Bundle").
+  accessories:
+    - 'controller|dualsense|joystick'
+    - 'headset|headphones|earbuds|speaker'
+    - 'disc drive'
+    - 'charging|battery'
+    - 'storage|\bssd\b|hard drive|memory card'
+    - '\bcable\b|\badapter\b|\bhdmi\b'
+    - 'portal|remote player'
 
 retailers:
   - name: PlayStation Direct

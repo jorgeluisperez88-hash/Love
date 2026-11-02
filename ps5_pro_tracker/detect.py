@@ -267,6 +267,15 @@ _SELLER_TEXT = re.compile(
 )
 
 
+_SELLER_JSON = re.compile(r'"(?:sellerDisplayName|sellerName|soldBy|merchantName)"\s*:\s*"([^"]{1,60})"')
+
+
+def _seller_from_json(html: str) -> str | None:
+    """Sellers in the page's embedded app data (e.g. Walmart's __NEXT_DATA__)."""
+    m = _SELLER_JSON.search(html)
+    return m.group(1).strip() if m else None
+
+
 def _seller_from_text(text: str) -> str | None:
     m = _SELLER_TEXT.search(text)
     return m.group(1).strip(" .") if m else None
@@ -284,7 +293,7 @@ def analyse_page(html: str) -> PageResult:
 
     result = structured or PageResult(UNKNOWN)
     result.title = result.title or _page_title(soup)
-    result.seller = result.seller or _seller_from_text(text)
+    result.seller = result.seller or _seller_from_json(html) or _seller_from_text(text)
     if result.price is None:
         price_meta = soup.find("meta", attrs={"property": re.compile(r"(product|og):price:amount", re.I)}) \
             or soup.find(attrs={"itemprop": "price"})

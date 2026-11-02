@@ -37,18 +37,28 @@ class Config:
     retailers: list[Retailer]
     include: list[re.Pattern[str]]
     exclude: list[re.Pattern[str]]
+    accessories: list[re.Pattern[str]] = field(default_factory=list)
 
     def is_ps5_pro(self, text: str | None) -> bool:
         """Does this title / link text / URL describe a PS5 Pro console or bundle?"""
         if not text:
             return False
         t = normalise(text)
-        return any(p.search(t) for p in self.include) and not any(p.search(t) for p in self.exclude)
+        if not any(p.search(t) for p in self.include) or any(p.search(t) for p in self.exclude):
+            return False
+        # Accessory words only count when the listing isn't a console or bundle,
+        # so "PS5 Pro Console + DualSense Controller Bundle" still matches.
+        if any(p.search(t) for p in self.accessories) and not _CONSOLE.search(t):
+            return False
+        return True
 
     def price_ok(self, price: float | None) -> bool:
         if price is None:
             return True  # unknown price: don't throw away a possible restock
         return self.settings.min_price <= price <= self.settings.max_price
+
+
+_CONSOLE = re.compile(r"\bconsole\b|\bbundle\b", re.I)
 
 
 def normalise(text: str) -> str:
@@ -78,4 +88,5 @@ def load_config(path: str | Path) -> Config:
     match = raw.get("match") or {}
     include = [re.compile(p, re.I) for p in match.get("include", [])]
     exclude = [re.compile(p, re.I) for p in match.get("exclude", [])]
-    return Config(settings, retailers, include, exclude)
+    accessories = [re.compile(p, re.I) for p in match.get("accessories", [])]
+    return Config(settings, retailers, include, exclude, accessories)

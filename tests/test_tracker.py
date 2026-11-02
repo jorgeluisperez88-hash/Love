@@ -210,3 +210,35 @@ def test_status_page(config, tmp_path):
     assert "<Console>" not in page.split("<script>")[0]  # data only lives inside the script
     assert "</script>" not in page.split("const DATA = ")[1].split(";\nconst LABELS")[0]
     assert (tmp_path / "status.json").exists()
+
+
+@pytest.mark.parametrize("text", [
+    "nacon revolution 5 pro wireless controller for playstation 5 /products/nacon-revolution-5-pro",
+    "Sony Disc Drive for PlayStation 5 Pro and Digital Edition Consoles",
+    "HyperX Cloud headset for PS5 Pro",
+    "(Open Box) Sony PlayStation 5 Pro Console",
+])
+def test_rejects_accessories(config, text):
+    assert not config.is_ps5_pro(text)
+
+
+@pytest.mark.parametrize("text", [
+    "PlayStation 5 Pro Console + 30th Anniversary Limited Edition DualSense",
+    "PlayStation 5 Pro Console + Disc Drive For PS5 Digital Edition Console",
+    "PS5 Pro DualSense Controller Bundle",
+])
+def test_keeps_console_bundles(config, text):
+    assert config.is_ps5_pro(text)
+
+
+def test_seller_from_embedded_json(config):
+    html = page('<button>Add to cart</button><script id="__NEXT_DATA__">{"sellerName":"BigDeals Store"}</script>')
+    f = FakeFetcher({"u": (200, html)})
+    c = tracker.check_url(f, Retailer("Walmart", seller_must_match="walmart"), "u", config, discovered=False)
+    assert c.status == tracker.IGNORED and "BigDeals" in c.reason
+
+
+def test_unconfirmed_seller_is_flagged(config):
+    f = FakeFetcher({"u": (200, page("<h1>PlayStation 5 Pro Console</h1><button>Add to cart</button>"))})
+    c = tracker.check_url(f, Retailer("Walmart", seller_must_match="walmart"), "u", config, discovered=True)
+    assert c.status == IN_STOCK and "seller not confirmed" in c.reason

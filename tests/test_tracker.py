@@ -191,3 +191,22 @@ def test_check_retailer_search_flow(config, monkeypatch):
     r = Retailer("Walmart", search=search, seller_must_match="walmart")
     checks = tracker.check_retailer(f, r, config)
     assert [(c.url, c.status) for c in checks] == [(product, IN_STOCK)]
+
+
+def test_status_page(config, tmp_path):
+    from ps5_pro_tracker import site
+    checks = [
+        tracker.Check("Target", "https://t/p", IN_STOCK, "PS5 Pro <Console>", 899.99, reason="json-ld"),
+        tracker.Check("Walmart", "https://w/p", tracker.IGNORED, "PS5 Pro", 1469.0, reason="scalper"),
+        tracker.Check("Amazon", "https://a/s", BLOCKED, reason="HTTP 503"),
+    ]
+    state = {}
+    tracker.update_state_and_alert(checks, state, config, dry_run=True)
+    status = site.build_status(checks, state, config)
+    assert status["in_stock"] == 1
+    assert status["retailers"][0]["name"] == "Target"
+    assert status["retailers"][0]["last_in_stock"]
+    page = site.write_site(status, tmp_path).read_text()
+    assert "<Console>" not in page.split("<script>")[0]  # data only lives inside the script
+    assert "</script>" not in page.split("const DATA = ")[1].split(";\nconst LABELS")[0]
+    assert (tmp_path / "status.json").exists()

@@ -14,7 +14,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from . import bestbuy_api, notify
+from . import bestbuy_api, notify, site
 from .config import Config, Retailer, load_config
 from .detect import BLOCKED, ERROR, IN_STOCK, NOT_FOUND, OUT_OF_STOCK, UNKNOWN, analyse_page, looks_blocked
 from .discover import find_candidates
@@ -164,6 +164,7 @@ def update_state_and_alert(checks: list[Check], state: dict, config: Config, dry
             entry["last_change"] = now.isoformat()
 
         if c.status == IN_STOCK:
+            entry["last_in_stock"] = now.isoformat()
             last_alert = prev.get("last_alert")
             was_in_stock = prev.get("status") == IN_STOCK
             due = not last_alert or now - datetime.fromisoformat(last_alert) >= realert
@@ -217,7 +218,8 @@ def report(checks: list[Check], alerted: list[Check]) -> str:
 # CLI
 # ---------------------------------------------------------------------------
 
-def run_once(config: Config, state_path: Path, only: list[str] | None, no_browser: bool, dry_run: bool) -> list[Check]:
+def run_once(config: Config, state_path: Path, only: list[str] | None, no_browser: bool, dry_run: bool,
+             site_dir: str | None = "site") -> list[Check]:
     fetcher = Fetcher(timeout=config.settings.request_timeout, allow_browser=not no_browser)
     checks: list[Check] = []
     try:
@@ -242,6 +244,9 @@ def run_once(config: Config, state_path: Path, only: list[str] | None, no_browse
     state = load_state(state_path)
     alerted = update_state_and_alert(checks, state, config, dry_run=dry_run)
     save_state(state_path, state)
+    if site_dir:
+        page = site.write_site(site.build_status(checks, state, config), site_dir)
+        log.info("status page written to %s", page)
 
     text = report(checks, alerted)
     print(text)
@@ -261,6 +266,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--only", nargs="+", metavar="RETAILER", help="only check these retailers (by name)")
     ap.add_argument("--no-browser", action="store_true", help="never launch the headless browser")
     ap.add_argument("--dry-run", action="store_true", help="don't send alerts")
+    ap.add_argument("--site-dir", default="site", help="where to write the status web page ('' to skip)")
     ap.add_argument("--test-alert", action="store_true", help="send a test notification and exit")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args(argv)
@@ -284,7 +290,7 @@ def main(argv: list[str] | None = None) -> int:
 
     state_path = Path(args.state)
     while True:
-        run_once(config, state_path, args.only, args.no_browser, args.dry_run)
+        run_once(config, state_path, args.only, args.no_browser, args.dry_run, args.site_dir or None)
         if not args.loop:
             return 0
         wait = args.interval + random.randint(0, max(1, args.interval // 5))

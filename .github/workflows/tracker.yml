@@ -19,6 +19,13 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write      # publish the status page
+      id-token: write   # required by deploy-pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     env:
       BESTBUY_API_KEY: ${{ secrets.BESTBUY_API_KEY }}
       NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
@@ -73,3 +80,26 @@ jobs:
         with:
           path: state
           key: tracker-state-${{ github.run_id }}
+
+      # Status web page. Turn it on once: Settings -> Pages -> Source: "GitHub Actions".
+      # Until then these steps are skipped without failing the run.
+      - name: Upload status page
+        id: upload_page
+        if: ${{ !inputs.test_alert && hashFiles('site/index.html') != '' }}
+        continue-on-error: true
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Publish status page
+        if: ${{ steps.upload_page.outcome == 'success' }}
+        id: deployment
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Link to status page
+        if: ${{ steps.deployment.outcome == 'success' }}
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          echo "### 📄 Status page: $PAGE_URL" >> "$GITHUB_STEP_SUMMARY"

@@ -49,6 +49,21 @@ Each run prints a table (also shown in the GitHub Actions run summary):
 | 🟠 | Amazon | BLOCKED | — | — | HTTP 503 - bot protection |
 ```
 
+## Status page
+
+Every run also builds a web page showing each store's latest status, with a
+**Go to store** button on anything in stock. It works on phones, follows your
+light/dark setting and reloads itself every 5 minutes.
+
+**Turn it on (one time):** in the repo go to **Settings → Pages** and under
+**Build and deployment → Source** choose **GitHub Actions**. After the next run
+the page is at `https://<your-username>.github.io/<repo>/`, and each run's
+summary links to it. Bookmark it or add it to your phone's home screen.
+
+GitHub Pages is free for public repos. Private repos need a paid GitHub plan.
+
+Running locally, the page is written to `site/index.html`; open it in a browser.
+
 ## Alerts
 
 Set any of these as environment variables locally, or as **repository

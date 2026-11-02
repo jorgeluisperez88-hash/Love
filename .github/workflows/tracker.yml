@@ -28,7 +28,9 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     env:
       BESTBUY_API_KEY: ${{ secrets.BESTBUY_API_KEY }}
-      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      # Phone alerts: install the ntfy app and subscribe to this topic.
+      # Set a NTFY_TOPIC secret to use a different (private) topic.
+      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC || 'ps5pro-79ff077b8b' }}
       NTFY_SERVER: ${{ secrets.NTFY_SERVER }}
       NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}

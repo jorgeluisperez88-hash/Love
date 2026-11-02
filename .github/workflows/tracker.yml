@@ -1,0 +1,75 @@
+name: PS5 Pro stock tracker
+
+on:
+  schedule:
+    # Every 10 minutes. GitHub may delay scheduled runs by a few minutes when busy.
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      test_alert:
+        description: "Only send a test notification"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ps5-pro-tracker
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BESTBUY_API_KEY: ${{ secrets.BESTBUY_API_KEY }}
+      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      NTFY_SERVER: ${{ secrets.NTFY_SERVER }}
+      NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
+      PUSHOVER_USER: ${{ secrets.PUSHOVER_USER }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      EMAIL_TO: ${{ secrets.EMAIL_TO }}
+      EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Send test alert
+        if: ${{ inputs.test_alert }}
+        run: python -m ps5_pro_tracker --test-alert
+
+      # State remembers what was already in stock so you get one alert per
+      # restock instead of one every 10 minutes.
+      - name: Restore state
+        if: ${{ !inputs.test_alert }}
+        uses: actions/cache/restore@v4
+        with:
+          path: state
+          key: tracker-state-${{ github.run_id }}
+          restore-keys: tracker-state-
+
+      - name: Check retailers
+        if: ${{ !inputs.test_alert }}
+        run: python -m ps5_pro_tracker
+
+      - name: Save state
+        if: ${{ always() && !inputs.test_alert }}
+        uses: actions/cache/save@v4
+        with:
+          path: state
+          key: tracker-state-${{ github.run_id }}

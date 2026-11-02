@@ -1,0 +1,113 @@
+# PS5 Pro stock tracker - retailer configuration
+#
+# Every retailer below is either Sony itself or a Sony-authorized
+# brick-and-mortar / online retailer. Third-party marketplace listings
+# (scalpers) are filtered out by `max_price` and, where a retailer exposes it,
+# by `seller_must_match`.
+#
+# Each retailer can have:
+#   products:  direct product page URLs that are checked every run
+#   search:    a search-results URL; product links whose text/URL looks like a
+#              PS5 Pro console or bundle are discovered and then checked
+#   render:    true -> load pages in a headless browser (needs Playwright).
+#              Use this for sites whose product data is only built by JavaScript.
+#   seller_must_match: regex; if the page names a seller, it must match
+#   enabled:   false to skip a retailer
+#
+# Product URLs change when retailers relist items. If a product URL starts
+# returning 404s the tracker reports it, and the `search` entry keeps finding
+# new listings automatically. Add any listing you find with `products:`.
+
+settings:
+  # Ignore anything priced above this (USD). Filters out scalper listings.
+  # The PS5 Pro list price was raised in 2026; bundles cost more, so keep headroom.
+  max_price: 1050
+  # Ignore anything priced below this (filters out accessories that slip through).
+  min_price: 500
+  # How many discovered product links to check per search page.
+  max_candidates_per_search: 6
+  # Seconds to wait between requests to the same retailer.
+  per_request_delay: 3
+  # Re-alert about an item that is still in stock after this many minutes.
+  realert_after_minutes: 60
+  request_timeout: 25
+
+# Text that marks a product as a PS5 Pro console or bundle.
+match:
+  include:
+    - 'ps5\s*pro'
+    - 'playstation\s*5\s*pro'
+    - 'playstation5[-\s]*pro'
+  # Text that marks a listing as an accessory or something other than the console.
+  exclude:
+    - '\bcase\b|carrying'
+    - '\bskins?\b|decal'
+    - 'faceplate|cover plate|console covers?\b'
+    - 'vertical stand|stand only|wall mount'
+    - 'charging station|charger'
+    - 'cooling fan|dust (cover|plug)'
+    - 'protection plan|warranty only|geek squad'
+    - 'pre[- ]?owned|refurbished|renewed|\bused\b'
+    - 'gift card'
+    - 'pro enhanced'
+
+retailers:
+  - name: PlayStation Direct
+    products:
+      - https://direct.playstation.com/en-us/buy-consoles/playstation5-pro-console
+    search: null
+    render: true
+
+  - name: Best Buy
+    # If the BESTBUY_API_KEY secret is set the official Best Buy Products API is
+    # used instead (more reliable, not blocked). Free key: https://developer.bestbuy.com
+    use_bestbuy_api: true
+    products: []
+    search: https://www.bestbuy.com/site/searchpage.jsp?st=ps5+pro+console
+    seller_must_match: 'best\s*buy'
+
+  - name: Walmart
+    products: []
+    search: https://www.walmart.com/search?q=ps5+pro+console
+    # Walmart.com mixes in marketplace sellers - only accept Walmart itself.
+    seller_must_match: 'walmart'
+
+  - name: Target
+    products: []
+    search: https://www.target.com/s?searchTerm=ps5+pro+console
+    render: true
+
+  - name: Amazon
+    products: []
+    search: https://www.amazon.com/s?k=ps5+pro+console
+    # Only "Ships from and sold by Amazon.com" listings.
+    seller_must_match: 'amazon(\.com)?'
+
+  - name: GameStop
+    products: []
+    search: https://www.gamestop.com/search/?q=ps5+pro+console
+    render: true
+
+  - name: Costco
+    products: []
+    search: https://www.costco.com/CatalogSearch?keyword=ps5+pro
+    render: true
+
+  - name: Sam's Club
+    products: []
+    search: https://www.samsclub.com/s/ps5%20pro
+    render: true
+
+  - name: Newegg
+    products: []
+    search: https://www.newegg.com/p/pl?d=ps5+pro+console
+    seller_must_match: 'newegg'
+
+  - name: Antonline
+    products: []
+    search: https://www.antonline.com/Search?q=ps5+pro
+
+  - name: Micro Center
+    enabled: false   # mostly in-store pickup; enable if you live near one
+    products: []
+    search: https://www.microcenter.com/search/search_results.aspx?Ntt=ps5+pro
